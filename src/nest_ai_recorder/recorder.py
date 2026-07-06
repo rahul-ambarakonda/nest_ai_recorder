@@ -1,4 +1,4 @@
-from __future__ import annotations
+﻿from __future__ import annotations
 
 import asyncio
 import logging
@@ -27,8 +27,16 @@ class SegmentRecorder:
             "-hide_banner",
             "-loglevel",
             "warning",
+            "-fflags",
+            "+genpts+discardcorrupt",
+            "-err_detect",
+            "ignore_err",
             "-rtsp_transport",
-            "tcp",
+            self.config.camera.rtsp_transport,
+            "-timeout",
+            str(self.config.camera.open_timeout_microseconds),
+            "-use_wallclock_as_timestamps",
+            "1",
             "-i",
             self.config.camera.rtsp_url,
             "-an",
@@ -61,4 +69,3 @@ class SegmentRecorder:
         except TimeoutError:
             self._process.kill()
             await self._process.wait()
-

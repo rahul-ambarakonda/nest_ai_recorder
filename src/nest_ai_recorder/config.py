@@ -10,6 +10,9 @@ from pydantic import BaseModel, Field, PositiveInt, field_validator
 class CameraConfig(BaseModel):
     name: str = "front_door"
     rtsp_url: str
+    rtsp_transport: Literal["tcp", "udp"] = "tcp"
+    open_timeout_microseconds: PositiveInt = 5_000_000
+    read_timeout_microseconds: PositiveInt = 5_000_000
 
 
 class BufferConfig(BaseModel):
@@ -43,6 +46,7 @@ class DetectionConfig(BaseModel):
     motion_threshold: float = Field(default=25.0, ge=0.0)
     motion_min_score: float = Field(default=0.02, ge=0.0, le=1.0)
     frame_interval_seconds: float = Field(default=1.0, gt=0.0)
+    reconnect_delay_seconds: float = Field(default=5.0, gt=0.0)
     ignore_zones: list[list[tuple[int, int]]] = Field(default_factory=list)
     detection_zones: list[list[tuple[int, int]]] = Field(default_factory=list)
 
@@ -92,4 +96,3 @@ def load_config(path: str | Path) -> AppConfig:
     with config_path.open("r", encoding="utf-8") as handle:
         raw = yaml.safe_load(handle) or {}
     return AppConfig.model_validate(raw)
-
