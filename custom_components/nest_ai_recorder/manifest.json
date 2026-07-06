@@ -1,0 +1,13 @@
+{
+  "domain": "nest_ai_recorder",
+  "name": "Nest AI Recorder",
+  "codeowners": [],
+  "config_flow": true,
+  "dependencies": ["mqtt"],
+  "documentation": "https://github.com/example/nest-ai-recorder",
+  "iot_class": "local_push",
+  "issue_tracker": "https://github.com/example/nest-ai-recorder/issues",
+  "requirements": [],
+  "version": "0.1.0"
+}
+

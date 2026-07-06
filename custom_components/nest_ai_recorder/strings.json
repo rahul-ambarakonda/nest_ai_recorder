@@ -1,0 +1,25 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Nest AI Recorder",
+        "data": {
+          "name": "Name",
+          "camera_name": "Camera name",
+          "rtsp_url": "go2rtc RTSP URL",
+          "mqtt_topic_prefix": "MQTT topic prefix"
+        }
+      }
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "data": {
+          "mqtt_topic_prefix": "MQTT topic prefix"
+        }
+      }
+    }
+  }
+}
+

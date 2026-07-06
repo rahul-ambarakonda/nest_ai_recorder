@@ -1,0 +1,12 @@
+services:
+  nest-ai-recorder:
+    build: .
+    container_name: nest-ai-recorder
+    restart: unless-stopped
+    environment:
+      NEST_AI_RECORDER_CONFIG: /config/config.yaml
+    volumes:
+      - ./config:/config:ro
+      - ./media:/media
+      - ./logs:/logs
+

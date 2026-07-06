@@ -1,0 +1,39 @@
+camera:
+  name: front_door
+  rtsp_url: rtsp://homeassistant.local:8554/nest_front_door
+
+buffer:
+  directory: /media/nest-ai-recorder/buffer
+  duration_seconds: 120
+  segment_seconds: 10
+
+clips:
+  output_directory: /media/videos
+  pre_buffer_seconds: 10
+  post_buffer_seconds: 50
+  retention_days: 30
+
+detection:
+  enabled: false
+  confidence: 0.55
+  object_classes:
+    - person
+  ignore_motion_without_object: true
+  cooldown_seconds: 90
+  ignore_zones: []
+  detection_zones: []
+
+mqtt:
+  enabled: false
+  host: core-mosquitto
+  port: 1883
+  username: ""
+  password: ""
+  topic_prefix: nest_ai_recorder
+
+logging:
+  directory: /logs
+  level: INFO
+  max_bytes: 10485760
+  backup_count: 5
+
