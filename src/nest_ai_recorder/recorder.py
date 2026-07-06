@@ -72,7 +72,7 @@ class SegmentRecorder:
                 ]
             )
 
-        command.extend(["-i", camera.rtsp_url, "-an"])
+        command.extend(["-i", camera.rtsp_url, "-map", "0:v:0", "-an"])
 
         if camera.video_codec == "copy":
             command.extend(["-c:v", "copy"])
@@ -127,6 +127,28 @@ class SegmentRecorder:
         command.append(camera.rtsp_url)
         return command
 
+    @staticmethod
+    def _parse_probe_output(stdout: bytes) -> tuple[str, int, int] | None:
+        line = stdout.decode("utf-8", errors="replace").strip()
+        if not line:
+            return None
+
+        parts = line.split(",")
+        if len(parts) < 3:
+            return None
+
+        codec_name = parts[0].strip()
+        try:
+            width = int(parts[1])
+            height = int(parts[2])
+        except ValueError:
+            return None
+
+        if width <= 0 or height <= 0:
+            return None
+
+        return codec_name, width, height
+
     async def wait_for_stream(self) -> None:
         while not self._stop_requested:
             LOGGER.info("waiting for camera stream to become readable")
@@ -136,16 +158,24 @@ class SegmentRecorder:
                 stderr=asyncio.subprocess.PIPE,
             )
             stdout, stderr = await process.communicate()
-            if process.returncode == 0 and stdout.strip():
+            probe_result = self._parse_probe_output(stdout)
+            if process.returncode == 0 and probe_result is not None:
+                codec_name, width, height = probe_result
                 LOGGER.info(
                     "camera stream is ready",
-                    extra={"details": stdout.decode("utf-8", errors="replace").strip()},
+                    extra={
+                        "codec": codec_name,
+                        "width": width,
+                        "height": height,
+                    },
                 )
                 return
 
+            details = stdout.decode("utf-8", errors="replace").strip() or "no video metadata"
             LOGGER.warning(
                 "camera stream not ready yet; retrying in 5 seconds",
                 extra={
+                    "details": details,
                     "stderr": stderr.decode("utf-8", errors="replace")[-500:],
                 },
             )
