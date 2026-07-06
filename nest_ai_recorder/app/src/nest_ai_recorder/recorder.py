@@ -52,10 +52,10 @@ class SegmentRecorder:
                     camera.rtsp_transport,
                     "-rtsp_flags",
                     "prefer_tcp",
-                    "-timeout",
-                    str(camera.open_timeout_microseconds),
-                    "-rw_timeout",
+                    "-stimeout",
                     str(camera.read_timeout_microseconds),
+                    "-ec",
+                    "guess_mvs+deblock",
                 ]
             )
         else:
@@ -77,8 +77,6 @@ class SegmentRecorder:
         else:
             command.extend(
                 [
-                    "-ec",
-                    "guess_mvs+deblock",
                     "-c:v",
                     "libx264",
                     "-preset",
