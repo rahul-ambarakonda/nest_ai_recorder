@@ -3,6 +3,7 @@
 import asyncio
 import logging
 import os
+import subprocess
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
@@ -16,6 +17,14 @@ LOGGER = logging.getLogger(__name__)
 @dataclass(frozen=True, slots=True)
 class VideoFrame:
     image: Any
+    timestamp: datetime
+
+
+@dataclass(frozen=True, slots=True)
+class SegmentFrames:
+    path: Path
+    first: Any
+    last: Any
     timestamp: datetime
 
 
@@ -91,27 +100,57 @@ class BufferFrameSource:
         self.interval_seconds = interval_seconds
 
     @staticmethod
-    def _read_frame(path: Path) -> Any | None:
+    def _decode_jpeg(data: bytes) -> Any | None:
         try:
             import cv2
+            import numpy as np
         except ImportError as exc:
             raise RuntimeError("OpenCV is not installed. Install nest-ai-recorder[ai].") from exc
 
-        capture = cv2.VideoCapture(str(path))
-        if not capture.isOpened():
-            capture.release()
-            return None
+        array = np.frombuffer(data, dtype=np.uint8)
+        return cv2.imdecode(array, cv2.IMREAD_COLOR)
 
-        try:
-            frame_count = int(capture.get(cv2.CAP_PROP_FRAME_COUNT))
-            if frame_count > 1:
-                capture.set(cv2.CAP_PROP_POS_FRAMES, frame_count - 1)
-            ok, frame = capture.read()
-            return frame if ok else None
-        finally:
-            capture.release()
+    @classmethod
+    def _ffmpeg_frame(cls, path: Path, from_end: bool = False) -> Any | None:
+        command = ["ffmpeg", "-hide_banner", "-loglevel", "error"]
+        if from_end:
+            command.extend(["-sseof", "-1"])
+        command.extend(
+            [
+                "-i",
+                str(path),
+                "-frames:v",
+                "1",
+                "-f",
+                "image2pipe",
+                "-vcodec",
+                "mjpeg",
+                "-",
+            ]
+        )
+        result = subprocess.run(command, capture_output=True, check=False)
+        if result.returncode != 0 or not result.stdout:
+            LOGGER.warning(
+                "failed to extract frame from segment",
+                extra={
+                    "segment": str(path),
+                    "from_end": from_end,
+                    "stderr": result.stderr.decode("utf-8", errors="replace")[-300:],
+                },
+            )
+            return None
+        return cls._decode_jpeg(result.stdout)
+
+    def _read_segment_frames(self, path: Path) -> tuple[Any | None, Any | None]:
+        first = self._ffmpeg_frame(path, from_end=False)
+        last = self._ffmpeg_frame(path, from_end=True)
+        return first, last
 
     async def frames(self) -> AsyncIterator[VideoFrame]:
+        async for segment in self.segment_frames():
+            yield VideoFrame(image=segment.last, timestamp=segment.timestamp)
+
+    async def segment_frames(self) -> AsyncIterator[SegmentFrames]:
         last_segment: Path | None = None
         while True:
             segments = discover_segments(self.buffer_directory, self.segment_seconds)
@@ -124,9 +163,17 @@ class BufferFrameSource:
                 await asyncio.sleep(self.interval_seconds)
                 continue
 
-            frame = await asyncio.to_thread(self._read_frame, target)
-            if frame is not None:
-                last_segment = target
-                yield VideoFrame(image=frame, timestamp=datetime.now(timezone.utc))
+            first, last = await asyncio.to_thread(self._read_segment_frames, target)
+            if first is None or last is None:
+                await asyncio.sleep(self.interval_seconds)
+                continue
 
+            last_segment = target
+            LOGGER.debug("sampled frames from segment", extra={"segment": str(target)})
+            yield SegmentFrames(
+                path=target,
+                first=first,
+                last=last,
+                timestamp=datetime.now(timezone.utc),
+            )
             await asyncio.sleep(self.interval_seconds)

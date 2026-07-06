@@ -1,5 +1,5 @@
 ﻿from nest_ai_recorder.config import DetectionConfig
-from nest_ai_recorder.detection import Detection, IouTracker, ZoneFilter
+from nest_ai_recorder.detection import Detection, IouTracker, MotionDetector, ZoneFilter
 from nest_ai_recorder.geometry import Box, Point, point_in_polygon
 
 
@@ -42,3 +42,16 @@ def test_iou_tracker_keeps_id_for_overlapping_detection() -> None:
     second = tracker.update([Detection("person", 0.9, Box(10, 10, 110, 110))])
 
     assert first[0].track_id == second[0].track_id
+
+
+def test_motion_detector_detects_difference_between_frames() -> None:
+    pytest = __import__("pytest")
+    np = pytest.importorskip("numpy")
+    cv2 = pytest.importorskip("cv2")
+
+    first = np.zeros((120, 160, 3), dtype=np.uint8)
+    second = first.copy()
+    cv2.rectangle(second, (40, 20), (120, 100), (255, 255, 255), thickness=-1)
+
+    detector = MotionDetector(threshold=25.0, min_score=0.01)
+    assert detector.has_motion_between(first, second) is True

@@ -115,6 +115,24 @@ class MotionDetector:
     def has_motion(self, frame: Any) -> bool:
         return self.score(frame) >= self.min_score
 
+    def score_between(self, first: Any, second: Any) -> float:
+        try:
+            import cv2
+        except ImportError as exc:
+            raise RuntimeError("OpenCV is not installed. Install nest-ai-recorder[ai].") from exc
+
+        first_gray = cv2.GaussianBlur(cv2.cvtColor(first, cv2.COLOR_BGR2GRAY), (21, 21), 0)
+        second_gray = cv2.GaussianBlur(cv2.cvtColor(second, cv2.COLOR_BGR2GRAY), (21, 21), 0)
+        if first_gray.shape != second_gray.shape:
+            second_gray = cv2.resize(second_gray, (first_gray.shape[1], first_gray.shape[0]))
+
+        delta = cv2.absdiff(first_gray, second_gray)
+        changed_pixels = delta > self.threshold
+        return float(changed_pixels.sum()) / float(changed_pixels.size)
+
+    def has_motion_between(self, first: Any, second: Any) -> bool:
+        return self.score_between(first, second) >= self.min_score
+
 
 class IouTracker:
     def __init__(self, iou_threshold: float = 0.35, max_missed: int = 5) -> None:

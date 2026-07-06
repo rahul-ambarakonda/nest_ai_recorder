@@ -9,7 +9,7 @@ from typing import Any, Protocol
 from nest_ai_recorder.config import AppConfig
 from nest_ai_recorder.dashboard import DashboardServer
 from nest_ai_recorder.detection import Detection, MotionDetector, NullDetector, ObjectDetector, YoloDetector
-from nest_ai_recorder.frame_source import BufferFrameSource, RtspFrameSource
+from nest_ai_recorder.frame_source import BufferFrameSource, RtspFrameSource, SegmentFrames
 from nest_ai_recorder.geometry import Box
 from nest_ai_recorder.mqtt import MqttPublisher
 from nest_ai_recorder.pipeline import EventPipeline
@@ -103,8 +103,34 @@ class RecorderService:
             await self.stop()
 
     async def run_detection_loop(self) -> None:
+        if isinstance(self.frame_source, BufferFrameSource):
+            async for segment in self.frame_source.segment_frames():
+                await self.process_segment_frames(segment)
+            return
+
         async for frame in self.frame_source.frames():
             await self.process_frame(frame.image, frame.timestamp)
+
+    async def process_segment_frames(self, segment: SegmentFrames) -> None:
+        timestamp = segment.timestamp
+        if self._use_motion_only:
+            segment_score = self.motion.score_between(segment.first, segment.last)
+            if segment_score >= self.config.detection.motion_min_score:
+                LOGGER.info(
+                    "motion detected in segment",
+                    extra={"score": segment_score, "segment": str(segment.path)},
+                )
+                await self.pipeline.handle_detection(
+                    Detection(
+                        label="motion",
+                        confidence=min(1.0, segment_score * 5),
+                        box=Box(0.0, 0.0, 1.0, 1.0),
+                    ),
+                    timestamp,
+                )
+                return
+
+        await self.process_frame(segment.last, timestamp)
 
     async def stop(self) -> None:
         if self._detection_task is not None:
