@@ -24,7 +24,8 @@ detection:
   enabled: true
   frame_source: buffer
   ignore_motion_without_object: false
-  motion_min_score: 0.005
+  motion_threshold: 15.0
+  motion_min_score: 0.001
   cooldown_seconds: 30
   frame_interval_seconds: 2.0
 

@@ -49,8 +49,8 @@ class DetectionConfig(BaseModel):
     object_classes: list[str] = Field(default_factory=lambda: ["person"])
     ignore_motion_without_object: bool = True
     cooldown_seconds: PositiveInt = 90
-    motion_threshold: float = Field(default=25.0, ge=0.0)
-    motion_min_score: float = Field(default=0.02, ge=0.0, le=1.0)
+    motion_threshold: float = Field(default=15.0, ge=0.0)
+    motion_min_score: float = Field(default=0.001, ge=0.0, le=1.0)
     frame_interval_seconds: float = Field(default=1.0, gt=0.0)
     reconnect_delay_seconds: float = Field(default=5.0, gt=0.0)
     ignore_zones: list[list[tuple[int, int]]] = Field(default_factory=list)

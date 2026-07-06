@@ -64,8 +64,11 @@ class NestAiRecorderLastEventSensor(SensorEntity):
 
     @callback
     def _message_received(self, msg: ReceiveMessage) -> None:
+        raw_payload = msg.payload
+        if isinstance(raw_payload, bytes):
+            raw_payload = raw_payload.decode("utf-8")
         try:
-            payload = json.loads(msg.payload)
+            payload = json.loads(raw_payload)
         except json.JSONDecodeError:
             _LOGGER.warning("Invalid MQTT payload on %s", msg.topic)
             return
@@ -75,3 +78,4 @@ class NestAiRecorderLastEventSensor(SensorEntity):
             key: value for key, value in payload.items() if key != "type"
         }
         self.async_write_ha_state()
+        _LOGGER.info("Updated last event from MQTT: %s", self._native_value)

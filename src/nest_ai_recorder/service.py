@@ -28,6 +28,7 @@ class RecorderService:
     def __init__(self, config: AppConfig, detector: ObjectDetector | None = None) -> None:
         self.config = config
         self._use_motion_only = False
+        self._last_segment_last_frame: Any | None = None
         self.recorder = SegmentRecorder(config)
         self.detector = detector or self._build_detector()
         self.frame_source = self._build_frame_source()
@@ -52,6 +53,7 @@ class RecorderService:
                 "using buffer-based motion detection",
                 extra={"directory": str(self.config.buffer.directory)},
             )
+            self._use_motion_only = True
             return BufferFrameSource(
                 self.config.buffer.directory,
                 self.config.buffer.segment_seconds,
@@ -111,26 +113,40 @@ class RecorderService:
         async for frame in self.frame_source.frames():
             await self.process_frame(frame.image, frame.timestamp)
 
-    async def process_segment_frames(self, segment: SegmentFrames) -> None:
-        timestamp = segment.timestamp
-        if self._use_motion_only:
-            segment_score = self.motion.score_between(segment.first, segment.last)
-            if segment_score >= self.config.detection.motion_min_score:
-                LOGGER.info(
-                    "motion detected in segment",
-                    extra={"score": segment_score, "segment": str(segment.path)},
-                )
-                await self.pipeline.handle_detection(
-                    Detection(
-                        label="motion",
-                        confidence=min(1.0, segment_score * 5),
-                        box=Box(0.0, 0.0, 1.0, 1.0),
-                    ),
-                    timestamp,
-                )
-                return
+    def _segment_motion_score(self, segment: SegmentFrames) -> float:
+        frames = [segment.first, segment.middle, segment.last]
+        scores: list[float] = []
+        for index, left in enumerate(frames):
+            for right in frames[index + 1 :]:
+                scores.append(self.motion.score_between(left, right))
+        if self._last_segment_last_frame is not None:
+            scores.append(self.motion.score_between(self._last_segment_last_frame, segment.last))
+        self._last_segment_last_frame = segment.last
+        return max(scores) if scores else 0.0
 
-        await self.process_frame(segment.last, timestamp)
+    async def process_segment_frames(self, segment: SegmentFrames) -> None:
+        score = self._segment_motion_score(segment)
+        min_score = self.config.detection.motion_min_score
+        LOGGER.info(
+            "segment motion score",
+            extra={
+                "score": round(score, 5),
+                "min_score": min_score,
+                "segment": str(segment.path),
+            },
+        )
+        if score < min_score:
+            return
+
+        LOGGER.info("motion detected in segment", extra={"score": score, "segment": str(segment.path)})
+        await self.pipeline.handle_detection(
+            Detection(
+                label="motion",
+                confidence=min(1.0, score * 5),
+                box=Box(0.0, 0.0, 1.0, 1.0),
+            ),
+            segment.timestamp,
+        )
 
     async def stop(self) -> None:
         if self._detection_task is not None:

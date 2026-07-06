@@ -24,6 +24,7 @@ class VideoFrame:
 class SegmentFrames:
     path: Path
     first: Any
+    middle: Any
     last: Any
     timestamp: datetime
 
@@ -111,10 +112,18 @@ class BufferFrameSource:
         return cv2.imdecode(array, cv2.IMREAD_COLOR)
 
     @classmethod
-    def _ffmpeg_frame(cls, path: Path, from_end: bool = False) -> Any | None:
+    def _ffmpeg_frame(
+        cls,
+        path: Path,
+        *,
+        seek_seconds: float | None = None,
+        from_end: bool = False,
+    ) -> Any | None:
         command = ["ffmpeg", "-hide_banner", "-loglevel", "error"]
         if from_end:
-            command.extend(["-sseof", "-1"])
+            command.extend(["-sseof", "-0.5"])
+        elif seek_seconds is not None:
+            command.extend(["-ss", str(seek_seconds)])
         command.extend(
             [
                 "-i",
@@ -134,6 +143,7 @@ class BufferFrameSource:
                 "failed to extract frame from segment",
                 extra={
                     "segment": str(path),
+                    "seek_seconds": seek_seconds,
                     "from_end": from_end,
                     "stderr": result.stderr.decode("utf-8", errors="replace")[-300:],
                 },
@@ -141,10 +151,22 @@ class BufferFrameSource:
             return None
         return cls._decode_jpeg(result.stdout)
 
-    def _read_segment_frames(self, path: Path) -> tuple[Any | None, Any | None]:
-        first = self._ffmpeg_frame(path, from_end=False)
+    def _read_segment_frames(self, path: Path) -> SegmentFrames | None:
+        middle_seek = max(1.0, self.segment_seconds / 2)
+        first = self._ffmpeg_frame(path)
+        middle = self._ffmpeg_frame(path, seek_seconds=middle_seek)
         last = self._ffmpeg_frame(path, from_end=True)
-        return first, last
+        if first is None or last is None:
+            return None
+        if middle is None:
+            middle = last
+        return SegmentFrames(
+            path=path,
+            first=first,
+            middle=middle,
+            last=last,
+            timestamp=datetime.now(timezone.utc),
+        )
 
     async def frames(self) -> AsyncIterator[VideoFrame]:
         async for segment in self.segment_frames():
@@ -163,17 +185,13 @@ class BufferFrameSource:
                 await asyncio.sleep(self.interval_seconds)
                 continue
 
-            first, last = await asyncio.to_thread(self._read_segment_frames, target)
-            if first is None or last is None:
+            segment = await asyncio.to_thread(self._read_segment_frames, target)
+            if segment is None:
+                LOGGER.warning("could not sample frames from segment", extra={"segment": str(target)})
                 await asyncio.sleep(self.interval_seconds)
                 continue
 
             last_segment = target
-            LOGGER.debug("sampled frames from segment", extra={"segment": str(target)})
-            yield SegmentFrames(
-                path=target,
-                first=first,
-                last=last,
-                timestamp=datetime.now(timezone.utc),
-            )
+            LOGGER.info("sampled segment for motion detection", extra={"segment": str(target)})
+            yield segment
             await asyncio.sleep(self.interval_seconds)
