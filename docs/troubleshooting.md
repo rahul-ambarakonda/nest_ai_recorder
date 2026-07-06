@@ -86,8 +86,29 @@ Use `127.0.0.1` when the add-on runs with host networking. Use
    (`camera.name` and **Camera name** in the config flow).
 6. **Listen for MQTT messages** in **Developer tools → MQTT** on topic:
    `nest_ai_recorder/front_door/event`
-7. **go2rtc stream name matches** the RTSP URL. If go2rtc shows `nest_doorbell`,
-   the URL must be `rtsp://127.0.0.1:8554/nest_doorbell`.
+7. **go2rtc stream name matches** the stream URL. If go2rtc shows `nest_doorbell`,
+   prefer the HTTP URL:
+   `http://127.0.0.1:1984/api/stream.mp4?src=nest_doorbell`
+   RTSP can show `non-existing PPS 0 referenced` errors with Nest/go2rtc.
+
+## H264 PPS / corrupt frame errors in add-on log
+
+If the log shows repeated messages like:
+
+```text
+non-existing PPS 0 referenced
+decode_slice_header error
+corrupt decoded frame
+```
+
+Switch from RTSP to the go2rtc HTTP stream in `/config/nest_ai_recorder.yaml`:
+
+```yaml
+camera:
+  rtsp_url: http://127.0.0.1:1984/api/stream.mp4?src=nest_doorbell
+```
+
+Then restart the add-on. Recording and motion detection use the same URL.
 
 ## Home Assistant entities do not appear
 

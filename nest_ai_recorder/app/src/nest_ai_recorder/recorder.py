@@ -21,6 +21,10 @@ class SegmentRecorder:
     def output_pattern(self) -> Path:
         return self.config.buffer.directory / f"{self.config.camera.name}_%Y%m%dT%H%M%SZ.mp4"
 
+    @staticmethod
+    def _is_rtsp_url(url: str) -> bool:
+        return url.lower().startswith("rtsp://")
+
     def build_command(self) -> list[str]:
         segment_seconds = str(self.config.buffer.segment_seconds)
         camera = self.config.camera
@@ -30,29 +34,51 @@ class SegmentRecorder:
             "-loglevel",
             "warning",
             "-fflags",
-            "+genpts+discardcorrupt",
+            "+genpts+discardcorrupt+nobuffer",
             "-err_detect",
             "ignore_err",
-            "-rtsp_transport",
-            camera.rtsp_transport,
-            "-timeout",
-            str(camera.open_timeout_microseconds),
             "-analyzeduration",
             str(camera.analyze_duration_microseconds),
             "-probesize",
             str(camera.probe_size),
             "-use_wallclock_as_timestamps",
             "1",
-            "-i",
-            camera.rtsp_url,
-            "-an",
         ]
+
+        if self._is_rtsp_url(camera.rtsp_url):
+            command.extend(
+                [
+                    "-rtsp_transport",
+                    camera.rtsp_transport,
+                    "-rtsp_flags",
+                    "prefer_tcp",
+                    "-timeout",
+                    str(camera.open_timeout_microseconds),
+                    "-rw_timeout",
+                    str(camera.read_timeout_microseconds),
+                ]
+            )
+        else:
+            command.extend(
+                [
+                    "-reconnect",
+                    "1",
+                    "-reconnect_streamed",
+                    "1",
+                    "-reconnect_delay_max",
+                    "5",
+                ]
+            )
+
+        command.extend(["-i", camera.rtsp_url, "-an"])
 
         if camera.video_codec == "copy":
             command.extend(["-c:v", "copy"])
         else:
             command.extend(
                 [
+                    "-ec",
+                    "guess_mvs+deblock",
                     "-c:v",
                     "libx264",
                     "-preset",
