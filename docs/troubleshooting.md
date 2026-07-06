@@ -5,19 +5,19 @@
 HACS may fail with an error like:
 
 ```text
-Got status code 404 when trying to download .../archive/refs/heads/88e9bea.zip
+Got status code 404 when trying to download .../archive/refs/heads/28209cb.zip
 ```
 
-That leaves an empty `manifest.json` and breaks the integration. Fix it with a
-manual install:
+HACS is trying to download a commit hash as if it were a branch name. Do not use
+HACS for now. Install manually instead:
 
 1. In HACS, remove **Nest AI Recorder** if it is listed.
 2. Delete the broken folder: `/config/custom_components/nest_ai_recorder/`
-3. Download the repo as ZIP from GitHub:
-   `https://github.com/rahul-ambarakonda/nest_ai_recorder/archive/refs/heads/main.zip`
+3. Download the latest release ZIP from GitHub:
+   `https://github.com/rahul-ambarakonda/nest_ai_recorder/releases/latest`
 4. Copy only the `custom_components/nest_ai_recorder/` folder into
    `/config/custom_components/nest_ai_recorder/`
-5. Confirm `manifest.json` is not empty.
+5. Confirm `manifest.json` shows `"version": "0.1.3"`.
 6. Restart Home Assistant.
 
 ## Setup failed for dependencies: mqtt

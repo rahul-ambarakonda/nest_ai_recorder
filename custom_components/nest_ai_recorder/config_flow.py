@@ -57,10 +57,10 @@ class NestAiRecorderConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     def async_get_options_flow(
         config_entry: config_entries.ConfigEntry,
     ) -> config_entries.OptionsFlow:
-        return NestAiRecorderOptionsFlow()
+        return NestAiRecorderOptionsFlow(config_entry)
 
 
-class NestAiRecorderOptionsFlow(config_entries.OptionsFlow):
+class NestAiRecorderOptionsFlow(config_entries.OptionsFlowWithConfigEntry):
     async def async_step_init(
         self, user_input: dict[str, Any] | None = None
     ) -> config_entries.ConfigFlowResult:
