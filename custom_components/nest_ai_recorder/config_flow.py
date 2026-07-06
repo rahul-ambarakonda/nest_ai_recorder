@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from typing import Any
+
 import voluptuous as vol
 from homeassistant import config_entries
 from homeassistant.const import CONF_NAME
@@ -18,7 +20,9 @@ from .const import (
 class NestAiRecorderConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     VERSION = 1
 
-    async def async_step_user(self, user_input: dict[str, object] | None = None):
+    async def async_step_user(
+        self, user_input: dict[str, Any] | None = None
+    ) -> config_entries.ConfigFlowResult:
         errors: dict[str, str] = {}
 
         if user_input is not None:
@@ -38,7 +42,7 @@ class NestAiRecorderConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 {
                     vol.Required(CONF_NAME, default="Nest AI Recorder"): str,
                     vol.Required(CONF_CAMERA_NAME, default=DEFAULT_CAMERA_NAME): str,
-                    vol.Required(CONF_RTSP_URL): str,
+                    vol.Required(CONF_RTSP_URL, default=""): str,
                     vol.Required(
                         CONF_MQTT_TOPIC_PREFIX,
                         default=DEFAULT_TOPIC_PREFIX,
@@ -50,15 +54,16 @@ class NestAiRecorderConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 
     @staticmethod
     @callback
-    def async_get_options_flow(config_entry):
-        return NestAiRecorderOptionsFlow(config_entry)
+    def async_get_options_flow(
+        config_entry: config_entries.ConfigEntry,
+    ) -> config_entries.OptionsFlow:
+        return NestAiRecorderOptionsFlow()
 
 
 class NestAiRecorderOptionsFlow(config_entries.OptionsFlow):
-    def __init__(self, config_entry) -> None:
-        self.config_entry = config_entry
-
-    async def async_step_init(self, user_input: dict[str, object] | None = None):
+    async def async_step_init(
+        self, user_input: dict[str, Any] | None = None
+    ) -> config_entries.ConfigFlowResult:
         if user_input is not None:
             return self.async_create_entry(title="", data=user_input)
 
@@ -79,4 +84,3 @@ class NestAiRecorderOptionsFlow(config_entries.OptionsFlow):
                 }
             ),
         )
-

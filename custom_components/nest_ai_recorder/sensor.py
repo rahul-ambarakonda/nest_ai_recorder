@@ -5,6 +5,7 @@ import logging
 from typing import Any
 
 from homeassistant.components import mqtt
+from homeassistant.components.mqtt.models import ReceiveMessage
 from homeassistant.components.sensor import SensorEntity
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant, callback
@@ -62,7 +63,7 @@ class NestAiRecorderLastEventSensor(SensorEntity):
         _LOGGER.debug("Subscribed to MQTT topic %s", topic)
 
     @callback
-    def _message_received(self, msg: mqtt.ReceiveMessage) -> None:
+    def _message_received(self, msg: ReceiveMessage) -> None:
         try:
             payload = json.loads(msg.payload)
         except json.JSONDecodeError:
