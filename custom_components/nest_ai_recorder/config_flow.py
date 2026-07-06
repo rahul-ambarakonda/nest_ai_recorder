@@ -22,12 +22,15 @@ class NestAiRecorderConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         errors: dict[str, str] = {}
 
         if user_input is not None:
-            await self.async_set_unique_id(str(user_input[CONF_CAMERA_NAME]))
-            self._abort_if_unique_id_configured()
-            return self.async_create_entry(
-                title=str(user_input[CONF_NAME]),
-                data=user_input,
-            )
+            if "mqtt" not in self.hass.config.components:
+                errors["base"] = "mqtt_not_configured"
+            else:
+                await self.async_set_unique_id(str(user_input[CONF_CAMERA_NAME]))
+                self._abort_if_unique_id_configured()
+                return self.async_create_entry(
+                    title=str(user_input[CONF_NAME]),
+                    data=user_input,
+                )
 
         return self.async_show_form(
             step_id="user",

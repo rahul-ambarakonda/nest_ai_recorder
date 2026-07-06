@@ -10,7 +10,11 @@
           "mqtt_topic_prefix": "MQTT topic prefix"
         }
       }
-    }
+    },
+    "error": {
+      "mqtt_not_configured": "Set up the MQTT integration first (Settings > Devices & services > Add integration > MQTT)."
+    },
+    "abort": {}
   },
   "options": {
     "step": {
