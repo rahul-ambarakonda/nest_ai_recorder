@@ -1,7 +1,9 @@
-from __future__ import annotations
+﻿from __future__ import annotations
 
 from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
+
+from nest_ai_recorder.detection import Detection
 
 
 @dataclass(frozen=True, slots=True)
@@ -27,3 +29,12 @@ class EventDeduplicator:
         self._last_seen[key] = timestamp
         return True
 
+
+def event_from_detection(detection: Detection, camera: str, timestamp: datetime) -> DetectionEvent:
+    return DetectionEvent(
+        event_type=detection.label,
+        camera=camera,
+        timestamp=timestamp,
+        confidence=detection.confidence,
+        track_id=detection.track_id,
+    )

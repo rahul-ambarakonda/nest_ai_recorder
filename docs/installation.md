@@ -1,4 +1,4 @@
-# Installation
+﻿# Installation
 
 ## Docker
 
@@ -9,6 +9,19 @@
 ```powershell
 docker compose up --build
 ```
+
+The dashboard is available on port `8099` when `dashboard.enabled` is true.
+
+## AI Runtime
+
+For local YOLO detection, install the AI extra in the runtime image or extend the
+Dockerfile to include:
+
+```text
+nest-ai-recorder[ai]
+```
+
+Keep `detection.enabled: false` until the model packages are installed.
 
 ## Home Assistant Custom Integration
 
@@ -21,6 +34,5 @@ runs as a Docker container or Home Assistant add-on.
 
 ## Home Assistant OS Add-on
 
-The `addon` directory contains the add-on scaffold. Phase 1 keeps the add-on
-metadata in place while the runtime image is developed from the root Dockerfile.
-
+The `addon` directory contains the add-on scaffold. It runs the same
+`nest-ai-recorder serve` command as the Docker image.

@@ -1,7 +1,9 @@
-from __future__ import annotations
+﻿from __future__ import annotations
 
+import asyncio
 from datetime import datetime
 from pathlib import Path
+from tempfile import NamedTemporaryFile
 
 from nest_ai_recorder.segments import Segment, select_segments
 
@@ -29,3 +31,58 @@ def plan_clip_segments(
         )
     ]
 
+
+def build_ffmpeg_concat_command(segment_paths: list[Path], output_path: Path) -> list[str]:
+    if not segment_paths:
+        raise ValueError("at least one segment is required to create a clip")
+    return [
+        "ffmpeg",
+        "-hide_banner",
+        "-loglevel",
+        "warning",
+        "-y",
+        "-f",
+        "concat",
+        "-safe",
+        "0",
+        "-i",
+        "{concat_file}",
+        "-c",
+        "copy",
+        str(output_path),
+    ]
+
+
+async def merge_segments(
+    segment_paths: list[Path],
+    output_path: Path,
+    timeout_seconds: int = 120,
+) -> Path:
+    if not segment_paths:
+        raise ValueError("at least one segment is required to create a clip")
+
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    with NamedTemporaryFile("w", encoding="utf-8", suffix=".txt", delete=False) as handle:
+        concat_file = Path(handle.name)
+        for segment_path in segment_paths:
+            escaped = str(segment_path).replace("'", "'\\''")
+            handle.write(f"file '{escaped}'\n")
+
+    command = [
+        part if part != "{concat_file}" else str(concat_file)
+        for part in build_ffmpeg_concat_command(segment_paths, output_path)
+    ]
+
+    try:
+        process = await asyncio.create_subprocess_exec(
+            *command,
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.PIPE,
+        )
+        _, stderr = await asyncio.wait_for(process.communicate(), timeout=timeout_seconds)
+        if process.returncode != 0:
+            raise RuntimeError(stderr.decode("utf-8", errors="replace"))
+    finally:
+        concat_file.unlink(missing_ok=True)
+
+    return output_path

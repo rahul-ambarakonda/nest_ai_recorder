@@ -1,4 +1,4 @@
-camera:
+﻿camera:
   name: front_door
   rtsp_url: rtsp://homeassistant.local:8554/nest_front_door
 
@@ -12,14 +12,22 @@ clips:
   pre_buffer_seconds: 10
   post_buffer_seconds: 50
   retention_days: 30
+  merge_timeout_seconds: 120
 
 detection:
   enabled: false
+  model: yolov8n.pt
   confidence: 0.55
   object_classes:
     - person
+    - car
+    - dog
+    - cat
   ignore_motion_without_object: true
   cooldown_seconds: 90
+  motion_threshold: 25.0
+  motion_min_score: 0.02
+  frame_interval_seconds: 1.0
   ignore_zones: []
   detection_zones: []
 
@@ -30,6 +38,12 @@ mqtt:
   username: ""
   password: ""
   topic_prefix: nest_ai_recorder
+
+dashboard:
+  enabled: true
+  host: 0.0.0.0
+  port: 8099
+  stats_path: /media/nest-ai-recorder/stats.json
 
 logging:
   directory: /logs

@@ -1,4 +1,4 @@
-FROM python:3.12-slim
+﻿FROM python:3.12-slim
 
 RUN apt-get update \
     && apt-get install -y --no-install-recommends ffmpeg \
@@ -16,5 +16,6 @@ VOLUME ["/config", "/media"]
 
 ENV NEST_AI_RECORDER_CONFIG=/config/config.yaml
 
-CMD ["nest-ai-recorder", "run"]
+CMD ["nest-ai-recorder", "serve"]
+
 

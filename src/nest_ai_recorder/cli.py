@@ -1,4 +1,4 @@
-from __future__ import annotations
+﻿from __future__ import annotations
 
 import argparse
 import asyncio
@@ -8,6 +8,7 @@ from pathlib import Path
 from nest_ai_recorder.config import load_config
 from nest_ai_recorder.logging import configure_logging
 from nest_ai_recorder.recorder import SegmentRecorder
+from nest_ai_recorder.service import RecorderService
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -18,7 +19,8 @@ def build_parser() -> argparse.ArgumentParser:
         help="Path to recorder YAML configuration.",
     )
     subparsers = parser.add_subparsers(dest="command", required=True)
-    subparsers.add_parser("run", help="Run the continuous segment recorder.")
+    subparsers.add_parser("run", help="Run the continuous segment recorder only.")
+    subparsers.add_parser("serve", help="Run recorder service with MQTT, stats, and dashboard.")
     subparsers.add_parser("check-config", help="Validate configuration and exit.")
     return parser
 
@@ -28,6 +30,13 @@ async def run_recorder(config_path: Path) -> int:
     configure_logging(config.logging)
     recorder = SegmentRecorder(config)
     return await recorder.run()
+
+
+async def run_service(config_path: Path) -> int:
+    config = load_config(config_path)
+    configure_logging(config.logging)
+    service = RecorderService(config)
+    return await service.run()
 
 
 def main() -> None:
@@ -41,3 +50,5 @@ def main() -> None:
     if args.command == "run":
         raise SystemExit(asyncio.run(run_recorder(config_path)))
 
+    if args.command == "serve":
+        raise SystemExit(asyncio.run(run_service(config_path)))
