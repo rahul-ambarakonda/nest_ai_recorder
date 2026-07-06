@@ -32,27 +32,39 @@ The integration requires Home Assistant's **MQTT** integration.
 
 ## No events appear
 
+The custom integration does not run detection by itself. You must also install
+and start the **Nest AI Recorder add-on** (or a systemd service on the host).
+
 Check each layer in order:
 
-1. **Recorder service is running**
-   - Add-on started, or `systemctl status nest-ai-recorder` is active.
-2. **Recorder MQTT is enabled** in `/config/nest_ai_recorder.yaml`:
+1. **Add-on is installed and running**
+   - **Settings → Add-ons → Nest AI Recorder → Start**
+   - Open the add-on **Log** tab and confirm there are no errors about OpenCV,
+     Ultralytics, RTSP, or MQTT.
+2. **Config file path is correct**
+   - Use `/config/nest_ai_recorder.yaml` (File editor may show this as
+     `/homeassistant/nest_ai_recorder.yaml`).
+3. **Recorder MQTT is enabled** in `/config/nest_ai_recorder.yaml`:
 
 ```yaml
 mqtt:
   enabled: true
-  host: core-mosquitto
+  host: 127.0.0.1
   port: 1883
   topic_prefix: nest_ai_recorder
 ```
 
-3. **Camera name matches** between recorder config and the HA integration
+Use `127.0.0.1` when the add-on runs with host networking. Use
+`core-mosquitto` only for non-host-network setups.
+
+4. **Detection is enabled** and AI packages are installed in the add-on image.
+5. **Camera name matches** between recorder config and the HA integration
    (`camera.name` and **Camera name** in the config flow).
-4. **Listen for MQTT messages** in **Developer tools → MQTT** on topic:
+6. **Listen for MQTT messages** in **Developer tools → MQTT** on topic:
    `nest_ai_recorder/front_door/event`
-5. **Detection is enabled** if you expect AI events. With
-   `detection.enabled: false`, the recorder buffers video but may not publish
-   detection events.
+7. **go2rtc stream name matches** the RTSP URL. If go2rtc shows `nest_doorbell`,
+   the URL must be `rtsp://127.0.0.1:8554/nest_doorbell`.
+8. **First model download** can take a few minutes after the add-on starts.
 
 ## Home Assistant entities do not appear
 

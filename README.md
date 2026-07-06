@@ -60,7 +60,7 @@ When enabled, the built-in dashboard listens on port `8099` and exposes:
 
 - `src/nest_ai_recorder`: recorder, detection, event pipeline, MQTT, dashboard.
 - `custom_components/nest_ai_recorder`: Home Assistant custom integration.
-- `addon`: Home Assistant OS add-on packaging.
+- `nest_ai_recorder`: Home Assistant OS add-on packaging.
 - `config`: example recorder configuration.
 - `docs`: installation, API, MQTT, troubleshooting.
 - `tests`: focused unit tests for core behavior.

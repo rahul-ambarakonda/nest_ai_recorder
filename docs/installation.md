@@ -6,29 +6,32 @@ package directly on the host.
 
 ## Home Assistant OS Add-on (Recommended)
 
-The add-on runs the recorder as a managed Home Assistant service with access to
-go2rtc, MQTT, and the `/media` folder.
+The add-on runs the actual recorder service. The custom integration only
+creates Home Assistant entities; it does not record video or run detection by
+itself.
 
-1. Add this repository as a custom add-on repository in Home Assistant
-   (**Settings → Add-ons → Add-on store → ⋮ → Repositories**).
+1. Add this repository in **Settings → Add-ons → Add-on store → ⋮ →
+   Repositories**:
+   `https://github.com/rahul-ambarakonda/nest_ai_recorder`
 2. Install the **Nest AI Recorder** add-on.
-3. Copy `config/config.example.yaml` to `/config/nest_ai_recorder.yaml` on your
-   Home Assistant config volume.
-4. Set `camera.rtsp_url` to your go2rtc RTSP stream, for example:
-   `rtsp://127.0.0.1:8554/nest_front_door`
-5. Enable MQTT and point it at the Mosquitto broker:
+3. Copy `config/config.ha.example.yaml` to `/config/nest_ai_recorder.yaml`.
+4. Set `camera.rtsp_url` to your go2rtc stream, for example:
+   `rtsp://127.0.0.1:8554/nest_doorbell`
+5. Keep MQTT pointed at the broker on the host:
 
 ```yaml
 mqtt:
   enabled: true
-  host: core-mosquitto
+  host: 127.0.0.1
   port: 1883
   topic_prefix: nest_ai_recorder
 ```
 
-6. Start the add-on.
+6. Start the add-on and check the add-on **Log** tab for errors.
+7. Install the custom integration from `custom_components/nest_ai_recorder`.
 
-The dashboard is available on port `8099` when `dashboard.enabled` is true.
+The first start can take several minutes while the add-on installs AI
+dependencies and downloads the YOLO model.
 
 ## Direct Install on Raspberry Pi
 

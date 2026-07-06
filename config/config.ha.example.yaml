@@ -1,0 +1,42 @@
+# Copy to /config/nest_ai_recorder.yaml on Home Assistant OS
+
+camera:
+  name: front_door
+  rtsp_url: rtsp://127.0.0.1:8554/nest_doorbell
+
+buffer:
+  directory: /media/nest-ai-recorder/buffer
+  duration_seconds: 120
+  segment_seconds: 10
+
+clips:
+  output_directory: /media/videos
+  pre_buffer_seconds: 10
+  post_buffer_seconds: 50
+
+detection:
+  enabled: true
+  model: yolov8n.pt
+  confidence: 0.55
+  object_classes:
+    - person
+    - car
+  ignore_motion_without_object: true
+  cooldown_seconds: 90
+  frame_interval_seconds: 1.0
+
+mqtt:
+  enabled: true
+  host: 127.0.0.1
+  port: 1883
+  topic_prefix: nest_ai_recorder
+
+dashboard:
+  enabled: true
+  host: 0.0.0.0
+  port: 8099
+  stats_path: /media/nest-ai-recorder/stats.json
+
+logging:
+  directory: /config/nest-ai-recorder/logs
+  level: INFO

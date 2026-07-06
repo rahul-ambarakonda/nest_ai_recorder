@@ -1,8 +1,8 @@
 name: Nest AI Recorder
-version: 0.1.0
+version: 0.1.2
 slug: nest_ai_recorder
-description: Local Nest camera recorder with AI-ready segment buffering
-url: https://github.com/example/nest-ai-recorder
+description: Local Nest camera recorder with AI detection and clip export
+url: https://github.com/rahul-ambarakonda/nest_ai_recorder
 arch:
   - aarch64
   - amd64
@@ -17,4 +17,3 @@ options:
   config_path: /config/nest_ai_recorder.yaml
 schema:
   config_path: str
-
