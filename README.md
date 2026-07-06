@@ -9,7 +9,7 @@ The repo now contains the full phased foundation:
 - Phase 1: RTSP segment recorder, circular buffer utilities, config loading.
 - Phase 2: YOLO adapter, motion scoring, zone filtering, lightweight tracking.
 - Phase 3: pre/post event segment selection and ffmpeg MP4 concat export.
-- Phase 4: MQTT payload generation, Docker, HA add-on scaffold, HA integration.
+- Phase 4: MQTT payload generation, HA add-on, HA integration.
 - Phase 5: JSON stats store, simple dashboard, tests, and docs.
 
 ## Architecture
@@ -29,25 +29,25 @@ flowchart LR
     Recorder --> Dashboard["Stats dashboard"]
 ```
 
-## Quick Start
+## Quick Start (Home Assistant OS on Raspberry Pi)
 
-1. Copy `config/config.example.yaml` to `config/config.yaml`.
-2. Set your go2rtc RTSP URL.
-3. Start the service:
+1. Install the **Nest AI Recorder** add-on from this repository.
+2. Copy `config/config.example.yaml` to `/config/nest_ai_recorder.yaml`.
+3. Set your go2rtc RTSP URL and enable MQTT.
+4. Start the add-on.
+5. Install the custom integration from `custom_components/nest_ai_recorder`.
 
-```powershell
-docker compose up --build
-```
+See [docs/installation.md](docs/installation.md) for add-on setup, direct Pi
+install, and the custom integration.
 
-The default container command is `nest-ai-recorder serve`. For recorder-only
-operation, run `nest-ai-recorder run`.
+The default command is `nest-ai-recorder serve`. For recorder-only operation,
+run `nest-ai-recorder run`.
 
 ## Detection
 
 Detection is optional. Set `detection.enabled: true` and install the `ai` extra
-inside your runtime image to use Ultralytics YOLO and OpenCV. The pure event,
-zone, tracking, MQTT, and clip logic is tested without requiring those heavy
-packages locally.
+to use Ultralytics YOLO and OpenCV. The pure event, zone, tracking, MQTT, and
+clip logic is tested without requiring those heavy packages locally.
 
 ## Dashboard
 
