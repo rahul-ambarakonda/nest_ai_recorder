@@ -5,7 +5,10 @@ import logging
 import os
 from dataclasses import dataclass
 from datetime import datetime, timezone
+from pathlib import Path
 from typing import Any, AsyncIterator
+
+from nest_ai_recorder.segments import discover_segments
 
 LOGGER = logging.getLogger(__name__)
 
@@ -55,7 +58,7 @@ class RtspFrameSource:
         while True:
             capture = cv2.VideoCapture(self.rtsp_url, cv2.CAP_FFMPEG)
             if not capture.isOpened():
-                LOGGER.warning("could not open RTSP stream; retrying")
+                LOGGER.warning("could not open live stream; retrying")
                 capture.release()
                 await asyncio.sleep(self.reconnect_delay_seconds)
                 continue
@@ -64,7 +67,7 @@ class RtspFrameSource:
                 while True:
                     ok, frame = await asyncio.to_thread(capture.read)
                     if not ok:
-                        LOGGER.warning("RTSP frame read failed; reconnecting")
+                        LOGGER.warning("live stream frame read failed; reconnecting")
                         break
                     yield VideoFrame(image=frame, timestamp=datetime.now(timezone.utc))
                     await asyncio.sleep(self.interval_seconds)
@@ -72,3 +75,58 @@ class RtspFrameSource:
                 capture.release()
 
             await asyncio.sleep(self.reconnect_delay_seconds)
+
+
+class BufferFrameSource:
+    """Sample frames from completed recorder segments to avoid a second live stream."""
+
+    def __init__(
+        self,
+        buffer_directory: Path,
+        segment_seconds: int,
+        interval_seconds: float = 1.0,
+    ) -> None:
+        self.buffer_directory = buffer_directory
+        self.segment_seconds = segment_seconds
+        self.interval_seconds = interval_seconds
+
+    @staticmethod
+    def _read_frame(path: Path) -> Any | None:
+        try:
+            import cv2
+        except ImportError as exc:
+            raise RuntimeError("OpenCV is not installed. Install nest-ai-recorder[ai].") from exc
+
+        capture = cv2.VideoCapture(str(path))
+        if not capture.isOpened():
+            capture.release()
+            return None
+
+        try:
+            frame_count = int(capture.get(cv2.CAP_PROP_FRAME_COUNT))
+            if frame_count > 1:
+                capture.set(cv2.CAP_PROP_POS_FRAMES, frame_count - 1)
+            ok, frame = capture.read()
+            return frame if ok else None
+        finally:
+            capture.release()
+
+    async def frames(self) -> AsyncIterator[VideoFrame]:
+        last_segment: Path | None = None
+        while True:
+            segments = discover_segments(self.buffer_directory, self.segment_seconds)
+            if len(segments) < 2:
+                await asyncio.sleep(self.interval_seconds)
+                continue
+
+            target = segments[-2].path
+            if target == last_segment:
+                await asyncio.sleep(self.interval_seconds)
+                continue
+
+            frame = await asyncio.to_thread(self._read_frame, target)
+            if frame is not None:
+                last_segment = target
+                yield VideoFrame(image=frame, timestamp=datetime.now(timezone.utc))
+
+            await asyncio.sleep(self.interval_seconds)

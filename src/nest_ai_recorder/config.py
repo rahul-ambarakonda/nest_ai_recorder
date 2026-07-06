@@ -11,8 +11,8 @@ class CameraConfig(BaseModel):
     name: str = "front_door"
     rtsp_url: str
     rtsp_transport: Literal["tcp", "udp"] = "tcp"
-    open_timeout_microseconds: PositiveInt = 5_000_000
-    read_timeout_microseconds: PositiveInt = 5_000_000
+    open_timeout_microseconds: PositiveInt = 30_000_000
+    read_timeout_microseconds: PositiveInt = 30_000_000
     analyze_duration_microseconds: PositiveInt = 10_000_000
     probe_size: PositiveInt = 10_000_000
     video_codec: Literal["copy", "libx264"] = "libx264"
@@ -42,6 +42,7 @@ class ClipConfig(BaseModel):
 
 class DetectionConfig(BaseModel):
     enabled: bool = False
+    frame_source: Literal["rtsp", "buffer"] = "buffer"
     model: str = "yolov8n.pt"
     confidence: float = Field(default=0.55, ge=0.0, le=1.0)
     object_classes: list[str] = Field(default_factory=lambda: ["person"])

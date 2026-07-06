@@ -108,7 +108,20 @@ camera:
   rtsp_url: http://127.0.0.1:1984/api/stream.mp4?src=nest_doorbell
 ```
 
-Then restart the add-on. Recording and motion detection use the same URL.
+On Home Assistant OS, port `1984` is often **not exposed on localhost**. Prefer RTSP
+on port `8554` and use buffer-based motion detection:
+
+```yaml
+camera:
+  rtsp_url: rtsp://127.0.0.1:8554/nest_doorbell
+
+detection:
+  enabled: true
+  frame_source: buffer
+```
+
+This uses one live stream for recording and reads completed buffer files for motion
+events, which avoids overloading the Nest/go2rtc stream.
 
 ## Home Assistant entities do not appear
 

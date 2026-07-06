@@ -4,12 +4,12 @@ import asyncio
 import contextlib
 import logging
 from datetime import datetime, timezone
-from typing import Any
+from typing import Any, Protocol
 
 from nest_ai_recorder.config import AppConfig
 from nest_ai_recorder.dashboard import DashboardServer
 from nest_ai_recorder.detection import Detection, MotionDetector, NullDetector, ObjectDetector, YoloDetector
-from nest_ai_recorder.frame_source import RtspFrameSource
+from nest_ai_recorder.frame_source import BufferFrameSource, RtspFrameSource
 from nest_ai_recorder.geometry import Box
 from nest_ai_recorder.mqtt import MqttPublisher
 from nest_ai_recorder.pipeline import EventPipeline
@@ -19,16 +19,18 @@ from nest_ai_recorder.stats import StatsStore
 LOGGER = logging.getLogger(__name__)
 
 
+class FrameSource(Protocol):
+    def frames(self) -> Any:
+        ...
+
+
 class RecorderService:
     def __init__(self, config: AppConfig, detector: ObjectDetector | None = None) -> None:
         self.config = config
         self._use_motion_only = False
         self.recorder = SegmentRecorder(config)
         self.detector = detector or self._build_detector()
-        self.frame_source = RtspFrameSource(
-            config.camera.rtsp_url,
-            interval_seconds=config.detection.frame_interval_seconds,
-        )
+        self.frame_source = self._build_frame_source()
         self.motion = MotionDetector(
             threshold=config.detection.motion_threshold,
             min_score=config.detection.motion_min_score,
@@ -42,6 +44,32 @@ class RecorderService:
             else None
         )
         self._detection_task: asyncio.Task[None] | None = None
+
+    def _build_frame_source(self) -> FrameSource:
+        detection = self.config.detection
+        if detection.frame_source == "buffer":
+            LOGGER.info(
+                "using buffer-based motion detection",
+                extra={"directory": str(self.config.buffer.directory)},
+            )
+            return BufferFrameSource(
+                self.config.buffer.directory,
+                self.config.buffer.segment_seconds,
+                interval_seconds=detection.frame_interval_seconds,
+            )
+
+        LOGGER.info(
+            "using live stream for motion detection",
+            extra={"url": self.config.camera.rtsp_url},
+        )
+        return RtspFrameSource(
+            self.config.camera.rtsp_url,
+            interval_seconds=detection.frame_interval_seconds,
+            rtsp_transport=self.config.camera.rtsp_transport,
+            open_timeout_microseconds=self.config.camera.open_timeout_microseconds,
+            read_timeout_microseconds=self.config.camera.read_timeout_microseconds,
+            reconnect_delay_seconds=detection.reconnect_delay_seconds,
+        )
 
     def _build_detector(self) -> ObjectDetector:
         if not self.config.detection.enabled:
@@ -100,7 +128,7 @@ class RecorderService:
 
         if self._use_motion_only and self.motion.has_motion(frame):
             score = self.motion.score(frame)
-            LOGGER.debug("motion detected", extra={"score": score})
+            LOGGER.info("motion detected", extra={"score": score})
             motion_detection = Detection(
                 label="motion",
                 confidence=min(1.0, score * 5),

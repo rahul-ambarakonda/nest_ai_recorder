@@ -2,8 +2,7 @@
 
 camera:
   name: front_door
-  # go2rtc HTTP is more reliable than RTSP for Nest doorbell streams.
-  rtsp_url: http://127.0.0.1:1984/api/stream.mp4?src=nest_doorbell
+  rtsp_url: rtsp://127.0.0.1:8554/nest_doorbell
   video_codec: libx264
   analyze_duration_microseconds: 10000000
   probe_size: 10000000
@@ -20,10 +19,11 @@ clips:
 
 detection:
   enabled: true
+  frame_source: buffer
   ignore_motion_without_object: false
   motion_min_score: 0.01
   cooldown_seconds: 30
-  frame_interval_seconds: 1.0
+  frame_interval_seconds: 2.0
 
 mqtt:
   enabled: true
