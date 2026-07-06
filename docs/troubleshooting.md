@@ -30,6 +30,30 @@ The integration requires Home Assistant's **MQTT** integration.
 4. Restart Home Assistant.
 5. Add **Nest AI Recorder** again.
 
+## Add-on image build failed
+
+The add-on avoids YOLO on Raspberry Pi because Ultralytics/PyTorch does not
+build reliably on Alpine aarch64. The add-on uses motion-based detection
+instead.
+
+1. Update the add-on repository in **Settings → Add-ons → Add-on store → Check
+   for updates**.
+2. Uninstall the failed add-on if needed, then install **Nest AI Recorder**
+   again.
+3. If install still fails, open **Settings → System → Logs → Supervisor** and
+   search for `nest_ai_recorder`.
+4. Confirm `/config/nest_ai_recorder.yaml` includes:
+
+```yaml
+detection:
+  enabled: true
+  ignore_motion_without_object: false
+  motion_min_score: 0.01
+  cooldown_seconds: 30
+```
+
+Events will publish as `"type": "motion"` over MQTT when movement is detected.
+
 ## No events appear
 
 The custom integration does not run detection by itself. You must also install
@@ -40,7 +64,7 @@ Check each layer in order:
 1. **Add-on is installed and running**
    - **Settings → Add-ons → Nest AI Recorder → Start**
    - Open the add-on **Log** tab and confirm there are no errors about OpenCV,
-     Ultralytics, RTSP, or MQTT.
+     RTSP, or MQTT.
 2. **Config file path is correct**
    - Use `/config/nest_ai_recorder.yaml` (File editor may show this as
      `/homeassistant/nest_ai_recorder.yaml`).
@@ -57,14 +81,13 @@ mqtt:
 Use `127.0.0.1` when the add-on runs with host networking. Use
 `core-mosquitto` only for non-host-network setups.
 
-4. **Detection is enabled** and AI packages are installed in the add-on image.
+4. **Detection is enabled** with motion settings on Raspberry Pi.
 5. **Camera name matches** between recorder config and the HA integration
    (`camera.name` and **Camera name** in the config flow).
 6. **Listen for MQTT messages** in **Developer tools → MQTT** on topic:
    `nest_ai_recorder/front_door/event`
 7. **go2rtc stream name matches** the RTSP URL. If go2rtc shows `nest_doorbell`,
    the URL must be `rtsp://127.0.0.1:8554/nest_doorbell`.
-8. **First model download** can take a few minutes after the add-on starts.
 
 ## Home Assistant entities do not appear
 

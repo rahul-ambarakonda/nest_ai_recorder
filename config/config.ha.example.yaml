@@ -16,13 +16,9 @@ clips:
 
 detection:
   enabled: true
-  model: yolov8n.pt
-  confidence: 0.55
-  object_classes:
-    - person
-    - car
-  ignore_motion_without_object: true
-  cooldown_seconds: 90
+  ignore_motion_without_object: false
+  motion_min_score: 0.01
+  cooldown_seconds: 30
   frame_interval_seconds: 1.0
 
 mqtt:

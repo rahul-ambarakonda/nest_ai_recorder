@@ -8,8 +8,9 @@ from typing import Any
 
 from nest_ai_recorder.config import AppConfig
 from nest_ai_recorder.dashboard import DashboardServer
-from nest_ai_recorder.detection import MotionDetector, NullDetector, ObjectDetector, YoloDetector
+from nest_ai_recorder.detection import Detection, MotionDetector, NullDetector, ObjectDetector, YoloDetector
 from nest_ai_recorder.frame_source import RtspFrameSource
+from nest_ai_recorder.geometry import Box
 from nest_ai_recorder.mqtt import MqttPublisher
 from nest_ai_recorder.pipeline import EventPipeline
 from nest_ai_recorder.recorder import SegmentRecorder
@@ -21,6 +22,7 @@ LOGGER = logging.getLogger(__name__)
 class RecorderService:
     def __init__(self, config: AppConfig, detector: ObjectDetector | None = None) -> None:
         self.config = config
+        self._use_motion_only = False
         self.recorder = SegmentRecorder(config)
         self.detector = detector or self._build_detector()
         self.frame_source = RtspFrameSource(
@@ -44,7 +46,15 @@ class RecorderService:
     def _build_detector(self) -> ObjectDetector:
         if not self.config.detection.enabled:
             return NullDetector()
-        return YoloDetector(self.config.detection.model)
+        try:
+            return YoloDetector(self.config.detection.model)
+        except RuntimeError as exc:
+            LOGGER.warning(
+                "YOLO unavailable, falling back to motion-only detection: %s",
+                exc,
+            )
+            self._use_motion_only = True
+            return NullDetector()
 
     async def run(self) -> int:
         self.mqtt.connect()
@@ -83,7 +93,16 @@ class RecorderService:
         timestamp = timestamp or datetime.now(timezone.utc)
         frame_detections = self.detector.detect(frame, timestamp)
         filtered = self.pipeline.prepare_detections(frame_detections.detections)
-        if not filtered and self.config.detection.ignore_motion_without_object:
+        if filtered:
+            for detection in filtered:
+                await self.pipeline.handle_detection(detection, timestamp)
             return
-        for detection in filtered:
-            await self.pipeline.handle_detection(detection, timestamp)
+
+        if self._use_motion_only and self.motion.has_motion(frame):
+            score = self.motion.score(frame)
+            motion_detection = Detection(
+                label="motion",
+                confidence=min(1.0, score * 5),
+                box=Box(0.0, 0.0, 1.0, 1.0),
+            )
+            await self.pipeline.handle_detection(motion_detection, timestamp)
