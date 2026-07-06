@@ -2,6 +2,8 @@
 
 camera:
   name: front_door
+  # Use nest_doorbell first. Switch to nest_doorbell_record only after
+  # that stream shows online in go2rtc with a working preview.
   rtsp_url: rtsp://127.0.0.1:8554/nest_doorbell
   video_codec: copy
   analyze_duration_microseconds: 50000000

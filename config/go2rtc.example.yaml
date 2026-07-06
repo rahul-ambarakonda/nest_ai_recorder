@@ -1,0 +1,14 @@
+# Example go2rtc config snippet for Nest doorbell recording.
+# Merge into /config/go2rtc.yaml and restart the go2rtc add-on.
+#
+# IMPORTANT:
+# - Keep your existing nest_doorbell source as-is.
+# - nest_doorbell_record must be ONE ffmpeg line only.
+# - Do not point ffmpeg at rtsp://127.0.0.1:8554/nest_doorbell yourself.
+
+streams:
+  nest_doorbell:
+    - nest:...your existing nest doorbell source...
+
+  nest_doorbell_record:
+    - ffmpeg:nest_doorbell#video=h264

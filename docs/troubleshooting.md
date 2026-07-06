@@ -91,6 +91,52 @@ Use `127.0.0.1` when the add-on runs with host networking. Use
    `http://127.0.0.1:1984/api/stream.mp4?src=nest_doorbell`
    RTSP can show `non-existing PPS 0 referenced` errors with Nest/go2rtc.
 
+## nest_doorbell_record shows 404 or exec/rtsp errors
+
+If go2rtc logs show:
+
+```text
+404 Not Found rtsp://127.0.0.1:8554/nest_doorbell_record
+exec/rtsp Output file does not contain any stream
+```
+
+The ffmpeg restream was configured incorrectly.
+
+Fix it:
+
+1. Open `/config/go2rtc.yaml`
+2. Remove any broken `nest_doorbell_record` block
+3. Add it back with **one line only**:
+
+```yaml
+streams:
+  nest_doorbell:
+    - ... keep your existing nest source ...
+
+  nest_doorbell_record:
+    - ffmpeg:nest_doorbell#video=h264
+```
+
+4. Do **not** use `rtsp://127.0.0.1:8554/nest_doorbell` inside
+   `nest_doorbell_record`
+5. Restart the **go2rtc** add-on
+6. In go2rtc UI, confirm `nest_doorbell_record` shows **online** and preview works
+7. Only then set recorder config to:
+
+```yaml
+camera:
+  rtsp_url: rtsp://127.0.0.1:8554/nest_doorbell_record
+```
+
+Until the restream works, use the original stream instead:
+
+```yaml
+camera:
+  rtsp_url: rtsp://127.0.0.1:8554/nest_doorbell
+```
+
+See `config/go2rtc.example.yaml` for a full example.
+
 ## H264 PPS / corrupt frame errors in add-on log
 
 If the log shows repeated messages like:
