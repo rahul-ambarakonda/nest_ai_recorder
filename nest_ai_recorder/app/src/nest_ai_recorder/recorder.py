@@ -88,21 +88,27 @@ class SegmentRecorder:
                 ]
             )
 
-        command.extend(
-            [
-                "-f",
-                "segment",
-                "-segment_format",
-                self.config.buffer.segment_format,
-                "-segment_time",
-                segment_seconds,
-                "-strftime",
-                "1",
-                "-reset_timestamps",
-                "1",
-                str(self.output_pattern),
-            ]
-        )
+        segment_args = [
+            "-f",
+            "segment",
+            "-segment_format",
+            self.config.buffer.segment_format,
+            "-segment_time",
+            segment_seconds,
+            "-strftime",
+            "1",
+            "-reset_timestamps",
+            "1",
+        ]
+        if self.config.buffer.segment_format == "mp4":
+            segment_args.extend(
+                [
+                    "-segment_format_options",
+                    "movflags=+frag_keyframe+empty_moov+default_base_moof",
+                ]
+            )
+        segment_args.append(str(self.output_pattern))
+        command.extend(segment_args)
         return command
 
     def build_probe_command(self) -> list[str]:

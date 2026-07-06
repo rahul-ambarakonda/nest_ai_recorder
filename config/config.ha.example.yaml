@@ -13,7 +13,7 @@ buffer:
   directory: /media/nest-ai-recorder/buffer
   duration_seconds: 120
   segment_seconds: 10
-  segment_format: mpegts
+  segment_format: mp4
 
 clips:
   output_directory: /media/videos

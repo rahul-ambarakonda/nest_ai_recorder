@@ -23,7 +23,7 @@ class BufferConfig(BaseModel):
     directory: Path = Path("/media/nest-ai-recorder/buffer")
     duration_seconds: PositiveInt = 120
     segment_seconds: PositiveInt = 10
-    segment_format: Literal["mpegts", "mp4"] = "mpegts"
+    segment_format: Literal["mpegts", "mp4"] = "mp4"
 
     @field_validator("duration_seconds")
     @classmethod
