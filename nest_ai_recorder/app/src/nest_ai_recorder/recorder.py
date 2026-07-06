@@ -19,7 +19,11 @@ class SegmentRecorder:
 
     @property
     def output_pattern(self) -> Path:
-        return self.config.buffer.directory / f"{self.config.camera.name}_%Y%m%dT%H%M%SZ.mp4"
+        extension = "ts" if self.config.buffer.segment_format == "mpegts" else "mp4"
+        return (
+            self.config.buffer.directory
+            / f"{self.config.camera.name}_%Y%m%dT%H%M%SZ.{extension}"
+        )
 
     @staticmethod
     def _is_rtsp_url(url: str) -> bool:
@@ -43,6 +47,8 @@ class SegmentRecorder:
             str(camera.probe_size),
             "-use_wallclock_as_timestamps",
             "1",
+            "-thread_queue_size",
+            "512",
         ]
 
         if self._is_rtsp_url(camera.rtsp_url):
@@ -86,6 +92,8 @@ class SegmentRecorder:
             [
                 "-f",
                 "segment",
+                "-segment_format",
+                self.config.buffer.segment_format,
                 "-segment_time",
                 segment_seconds,
                 "-strftime",
@@ -97,10 +105,60 @@ class SegmentRecorder:
         )
         return command
 
+    def build_probe_command(self) -> list[str]:
+        camera = self.config.camera
+        command = [
+            "ffprobe",
+            "-v",
+            "error",
+            "-analyzeduration",
+            str(camera.analyze_duration_microseconds),
+            "-probesize",
+            str(camera.probe_size),
+            "-select_streams",
+            "v:0",
+            "-show_entries",
+            "stream=codec_name,width,height",
+            "-of",
+            "csv=p=0",
+        ]
+        if self._is_rtsp_url(camera.rtsp_url):
+            command.extend(["-rtsp_transport", camera.rtsp_transport])
+        command.append(camera.rtsp_url)
+        return command
+
+    async def wait_for_stream(self) -> None:
+        while not self._stop_requested:
+            LOGGER.info("waiting for camera stream to become readable")
+            process = await asyncio.create_subprocess_exec(
+                *self.build_probe_command(),
+                stdout=asyncio.subprocess.PIPE,
+                stderr=asyncio.subprocess.PIPE,
+            )
+            stdout, stderr = await process.communicate()
+            if process.returncode == 0 and stdout.strip():
+                LOGGER.info(
+                    "camera stream is ready",
+                    extra={"details": stdout.decode("utf-8", errors="replace").strip()},
+                )
+                return
+
+            LOGGER.warning(
+                "camera stream not ready yet; retrying in 5 seconds",
+                extra={
+                    "stderr": stderr.decode("utf-8", errors="replace")[-500:],
+                },
+            )
+            await asyncio.sleep(5)
+
     async def run(self) -> int:
         last_return_code = 0
         while not self._stop_requested:
             self.config.buffer.directory.mkdir(parents=True, exist_ok=True)
+            await self.wait_for_stream()
+            if self._stop_requested:
+                break
+
             command = self.build_command()
             LOGGER.info("starting recorder", extra={"command": command})
             self._process = await asyncio.create_subprocess_exec(*command)

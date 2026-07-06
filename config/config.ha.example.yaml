@@ -3,14 +3,15 @@
 camera:
   name: front_door
   rtsp_url: rtsp://127.0.0.1:8554/nest_doorbell
-  video_codec: libx264
-  analyze_duration_microseconds: 10000000
-  probe_size: 10000000
+  video_codec: copy
+  analyze_duration_microseconds: 50000000
+  probe_size: 50000000
 
 buffer:
   directory: /media/nest-ai-recorder/buffer
   duration_seconds: 120
   segment_seconds: 10
+  segment_format: mpegts
 
 clips:
   output_directory: /media/videos

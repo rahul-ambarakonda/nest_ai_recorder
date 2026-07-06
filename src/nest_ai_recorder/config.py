@@ -13,9 +13,9 @@ class CameraConfig(BaseModel):
     rtsp_transport: Literal["tcp", "udp"] = "tcp"
     open_timeout_microseconds: PositiveInt = 30_000_000
     read_timeout_microseconds: PositiveInt = 30_000_000
-    analyze_duration_microseconds: PositiveInt = 10_000_000
-    probe_size: PositiveInt = 10_000_000
-    video_codec: Literal["copy", "libx264"] = "libx264"
+    analyze_duration_microseconds: PositiveInt = 50_000_000
+    probe_size: PositiveInt = 50_000_000
+    video_codec: Literal["copy", "libx264"] = "copy"
     video_preset: str = "ultrafast"
 
 
@@ -23,6 +23,7 @@ class BufferConfig(BaseModel):
     directory: Path = Path("/media/nest-ai-recorder/buffer")
     duration_seconds: PositiveInt = 120
     segment_seconds: PositiveInt = 10
+    segment_format: Literal["mpegts", "mp4"] = "mpegts"
 
     @field_validator("duration_seconds")
     @classmethod

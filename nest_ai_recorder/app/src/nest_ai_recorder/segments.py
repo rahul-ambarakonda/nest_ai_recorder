@@ -45,7 +45,8 @@ def discover_segments(directory: Path, segment_seconds: int) -> list[Segment]:
 
     segments = [
         segment
-        for path in directory.glob("*.mp4")
+        for pattern in ("*.ts", "*.mp4")
+        for path in directory.glob(pattern)
         if (segment := parse_segment(path, segment_seconds)) is not None
     ]
     return sorted(segments, key=lambda item: item.start)
