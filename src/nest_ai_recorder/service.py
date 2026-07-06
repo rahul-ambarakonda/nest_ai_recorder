@@ -100,6 +100,7 @@ class RecorderService:
 
         if self._use_motion_only and self.motion.has_motion(frame):
             score = self.motion.score(frame)
+            LOGGER.debug("motion detected", extra={"score": score})
             motion_detection = Detection(
                 label="motion",
                 confidence=min(1.0, score * 5),

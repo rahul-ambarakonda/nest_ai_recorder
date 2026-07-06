@@ -1,12 +1,15 @@
 from __future__ import annotations
 
 import json
+import logging
 from dataclasses import dataclass
 from datetime import timezone
 from pathlib import Path
 
 from nest_ai_recorder.config import MqttConfig
 from nest_ai_recorder.events import DetectionEvent
+
+LOGGER = logging.getLogger(__name__)
 
 
 @dataclass(frozen=True, slots=True)
@@ -56,11 +59,17 @@ class MqttPublisher:
         client.connect(self.config.host, self.config.port)
         client.loop_start()
         self._client = client
+        LOGGER.info(
+            "connected to mqtt broker",
+            extra={"host": self.config.host, "port": self.config.port},
+        )
 
     def publish(self, payload: MqttPayload) -> None:
         if self._client is None:
+            LOGGER.warning("skipped mqtt publish because client is not connected")
             return
         self._client.publish(payload.topic, json.dumps(payload.body), retain=False)
+        LOGGER.info("published mqtt event", extra={"topic": payload.topic, "type": payload.body.get("type")})
 
     def close(self) -> None:
         if self._client is None:

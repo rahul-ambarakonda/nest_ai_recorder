@@ -1,5 +1,6 @@
 ﻿from __future__ import annotations
 
+import logging
 from datetime import datetime
 from pathlib import Path
 
@@ -10,6 +11,8 @@ from nest_ai_recorder.events import DetectionEvent, EventDeduplicator, event_fro
 from nest_ai_recorder.mqtt import MqttPublisher, event_payload
 from nest_ai_recorder.segments import Segment, discover_segments
 from nest_ai_recorder.stats import StatsStore
+
+LOGGER = logging.getLogger(__name__)
 
 
 class EventPipeline:
@@ -39,15 +42,32 @@ class EventPipeline:
         if not self.deduplicator.should_emit(event):
             return None
 
-        clip_path = await self.create_clip(event, known_segments)
+        LOGGER.info(
+            "event detected",
+            extra={
+                "event_type": event.event_type,
+                "confidence": event.confidence,
+                "camera": event.camera,
+            },
+        )
+
+        if self.mqtt is not None:
+            self.mqtt.publish(event_payload(event, None, self.config.mqtt.topic_prefix))
+
+        clip_path: Path | None = None
+        try:
+            clip_path = await self.create_clip(event, known_segments)
+        except Exception:
+            LOGGER.exception("failed to create clip for event %s", event.event_type)
+
+        if clip_path is not None and self.mqtt is not None:
+            self.mqtt.publish(event_payload(event, clip_path, self.config.mqtt.topic_prefix))
+
         if self.stats is not None:
             self.stats.stats.record_event(event.event_type, event.timestamp)
             if clip_path is not None:
                 self.stats.stats.record_clip(clip_path)
             self.stats.save()
-
-        if self.mqtt is not None:
-            self.mqtt.publish(event_payload(event, clip_path, self.config.mqtt.topic_prefix))
 
         return clip_path
 
