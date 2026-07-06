@@ -50,12 +50,8 @@ class SegmentRecorder:
                 [
                     "-rtsp_transport",
                     camera.rtsp_transport,
-                    "-rtsp_flags",
-                    "prefer_tcp",
-                    "-stimeout",
-                    str(camera.read_timeout_microseconds),
-                    "-ec",
-                    "guess_mvs+deblock",
+                    "-timeout",
+                    str(camera.open_timeout_microseconds),
                 ]
             )
         else:

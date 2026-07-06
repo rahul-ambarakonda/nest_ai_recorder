@@ -1,5 +1,5 @@
 name: Nest AI Recorder
-version: 0.1.8
+version: 0.1.9
 slug: nest_ai_recorder
 description: Local Nest camera recorder with AI detection and clip export
 url: https://github.com/rahul-ambarakonda/nest_ai_recorder
