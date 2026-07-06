@@ -13,6 +13,10 @@ class CameraConfig(BaseModel):
     rtsp_transport: Literal["tcp", "udp"] = "tcp"
     open_timeout_microseconds: PositiveInt = 5_000_000
     read_timeout_microseconds: PositiveInt = 5_000_000
+    analyze_duration_microseconds: PositiveInt = 10_000_000
+    probe_size: PositiveInt = 10_000_000
+    video_codec: Literal["copy", "libx264"] = "libx264"
+    video_preset: str = "ultrafast"
 
 
 class BufferConfig(BaseModel):
