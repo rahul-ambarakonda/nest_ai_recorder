@@ -91,6 +91,56 @@ Use `127.0.0.1` when the add-on runs with host networking. Use
    `http://127.0.0.1:1984/api/stream.mp4?src=nest_doorbell`
    RTSP can show `non-existing PPS 0 referenced` errors with Nest/go2rtc.
 
+## MQTT authentication failed / not authorised
+
+If Mosquitto logs show:
+
+```text
+error: received null username or password for unpwd check
+disconnected: not authorised
+```
+
+The recorder is connecting without credentials. Home Assistant connects as user
+`homeassistant`, but the Nest AI Recorder add-on must use its own MQTT login.
+
+### Step 1 — Create an MQTT user in Mosquitto
+
+1. **Settings → Add-ons → Mosquitto broker → Configuration**
+2. Add a login:
+
+```yaml
+logins:
+  - username: nest_recorder
+    password: choose_a_strong_password
+allow_anonymous: false
+```
+
+3. **Save** and **Restart** the Mosquitto broker add-on
+
+### Step 2 — Add credentials to recorder config
+
+In `/config/nest_ai_recorder.yaml`:
+
+```yaml
+mqtt:
+  enabled: true
+  host: 127.0.0.1
+  port: 1883
+  username: nest_recorder
+  password: choose_a_strong_password
+  topic_prefix: nest_ai_recorder
+```
+
+### Step 3 — Restart Nest AI Recorder add-on
+
+The add-on log should show:
+
+```text
+connected to mqtt broker ... username: nest_recorder
+```
+
+Mosquitto should stop showing `not authorised` errors.
+
 ## nest_doorbell_record shows 404 or exec/rtsp errors
 
 If go2rtc logs show:

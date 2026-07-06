@@ -33,6 +33,8 @@ mqtt:
   enabled: true
   host: 127.0.0.1
   port: 1883
+  username: nest_recorder
+  password: your_mqtt_password
   topic_prefix: nest_ai_recorder
 
 dashboard:
